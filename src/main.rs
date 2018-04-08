@@ -42,7 +42,7 @@ layout(std430, binding = 0) buffer resultBuffer
 
 void main()
 {
-    result[gl_LocalInvocationIndex] = 42 + gl_LocalInvocationIndex;
+    result[gl_LocalInvocationIndex] = result[gl_LocalInvocationIndex] + gl_LocalInvocationIndex;
 }
 
         ";
@@ -58,7 +58,10 @@ void main()
         let mut ssbo: GLuint = 0;
         gl::GenBuffers(1, &mut ssbo as *mut _);
         gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, ssbo);
-        gl::BufferData(gl::SHADER_STORAGE_BUFFER, mem::size_of::<[u32; 4]>() as _, ptr::null(), gl::DYNAMIC_COPY);
+        let initial_values = [32u32; 4];
+        gl::BufferData(gl::SHADER_STORAGE_BUFFER, mem::size_of::<[u32; 4]>() as _, &initial_values as *const [u32; 4] as *const _, gl::DYNAMIC_COPY);
+        gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, 0);
+
         gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, 0, ssbo);
 
         gl::UseProgram(program);
@@ -68,9 +71,11 @@ void main()
 
         // Read result
         let res = {
+            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, ssbo);
             let ptr = gl::MapBuffer(gl::SHADER_STORAGE_BUFFER, gl::READ_ONLY) as *const [u32; 4];
             let res = *ptr;
             gl::UnmapBuffer(gl::SHADER_STORAGE_BUFFER);
+            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, 0);
             res
         };
 
